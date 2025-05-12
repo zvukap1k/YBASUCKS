@@ -1,3 +1,4 @@
+--by zvukap1k
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -21,7 +22,7 @@ frame.Draggable = true
 frame.Parent = screenGui
 
 local title = Instance.new("TextLabel")
-title.Text = "Выбор игроков"
+title.Text = "Attack them"
 title.Size = UDim2.new(1, 0, 0.15, 0)
 title.Font = Enum.Font.SourceSansBold
 title.TextSize = 14
@@ -37,7 +38,7 @@ playerList.ScrollBarThickness = 5
 playerList.Parent = frame
 
 local toggleButton = Instance.new("TextButton")
-toggleButton.Text = "ВКЛ/ВЫКЛ (Right Shift)"
+toggleButton.Text = "ON/OFF (Right Shift)"
 toggleButton.Size = UDim2.new(1, -10, 0.1, 0)
 toggleButton.Position = UDim2.new(0, 5, 0.85, 0)
 toggleButton.TextSize = 12
@@ -46,7 +47,7 @@ toggleButton.Parent = frame
 local function toggleGUI()
     guiVisible = not guiVisible
     frame.Visible = guiVisible
-    print("GUI видимость:", guiVisible)
+    print("GUI visible:", guiVisible)
 end
 
 local function updatePlayerList()
@@ -74,12 +75,12 @@ end
 
 local function inputHandler(input, gameProcessed)
     if gameProcessed then return end
-    print("Нажата клавиша:", input.KeyCode)
+    print("Key pressed:", input.KeyCode)
     
     if input.KeyCode == Enum.KeyCode.RightShift then
         isActive = not isActive
-        toggleButton.Text = isActive and "АКТИВНО (Right Shift)" or "ВЫКЛ (Right Shift)"
-        print("Режим телепорта:", isActive)
+        toggleButton.Text = isActive and "ON (Right Shift)" or "OFF (Right Shift)"
+        print("Attack mode:", isActive)
         
         if not isActive then
             for playerName in pairs(selectedPlayers) do
@@ -106,7 +107,7 @@ Players.PlayerRemoving:Connect(updatePlayerList)
 
 toggleButton.MouseButton1Click:Connect(function()
     isActive = not isActive
-    toggleButton.Text = isActive and "АКТИВНО (Right Shift)" or "ВЫКЛ (Right Shift)"
+    toggleButton.Text = isActive and "ON (Right Shift)" or "OFF (Right Shift)"
 end)
 
 local function movePlayers()
