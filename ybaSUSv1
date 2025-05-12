@@ -1,0 +1,142 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local targetDistance = 5
+local isActive = false
+local selectedPlayers = {}
+local guiVisible = true
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "PlayerSelectorGUI"
+screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0.2, 0, 0.3, 0)
+frame.Position = UDim2.new(0.75, 0, 0.1, 0)
+frame.BackgroundTransparency = 0.7
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+frame.Active = true
+frame.Draggable = true
+frame.Parent = screenGui
+
+local title = Instance.new("TextLabel")
+title.Text = "Выбор игроков"
+title.Size = UDim2.new(1, 0, 0.15, 0)
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 14
+title.TextColor3 = Color3.new(1, 1, 1)
+title.BackgroundTransparency = 1
+title.Parent = frame
+
+local playerList = Instance.new("ScrollingFrame")
+playerList.Size = UDim2.new(1, -5, 0.7, 0)
+playerList.Position = UDim2.new(0, 0, 0.15, 0)
+playerList.BackgroundTransparency = 1
+playerList.ScrollBarThickness = 5
+playerList.Parent = frame
+
+local toggleButton = Instance.new("TextButton")
+toggleButton.Text = "ВКЛ/ВЫКЛ (Right Shift)"
+toggleButton.Size = UDim2.new(1, -10, 0.1, 0)
+toggleButton.Position = UDim2.new(0, 5, 0.85, 0)
+toggleButton.TextSize = 12
+toggleButton.Parent = frame
+
+local function toggleGUI()
+    guiVisible = not guiVisible
+    frame.Visible = guiVisible
+    print("GUI видимость:", guiVisible)
+end
+
+local function updatePlayerList()
+    playerList:ClearAllChildren()
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= game.Players.LocalPlayer then
+            local button = Instance.new("TextButton")
+            button.Text = " "..player.Name
+            button.Size = UDim2.new(1, -10, 0, 25)
+            button.Position = UDim2.new(0, 5, 0, #playerList:GetChildren() * 27)
+            button.TextXAlignment = Enum.TextXAlignment.Left
+            button.TextSize = 12
+            button.BackgroundColor3 = selectedPlayers[player.Name] and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(60, 60, 60)
+            button.Parent = playerList
+            
+            button.MouseButton1Click:Connect(function()
+                selectedPlayers[player.Name] = not selectedPlayers[player.Name]
+                button.BackgroundColor3 = selectedPlayers[player.Name] and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(60, 60, 60)
+                print("Выбран игрок:", player.Name, selectedPlayers[player.Name])
+            end)
+        end
+    end
+end
+
+local function inputHandler(input, gameProcessed)
+    if gameProcessed then return end
+    print("Нажата клавиша:", input.KeyCode)
+    
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        isActive = not isActive
+        toggleButton.Text = isActive and "АКТИВНО (Right Shift)" or "ВЫКЛ (Right Shift)"
+        print("Режим телепорта:", isActive)
+        
+        if not isActive then
+            for playerName in pairs(selectedPlayers) do
+                local player = Players:FindFirstChild(playerName)
+                if player and player.Character then
+                    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+                    if humanoid then
+                        humanoid.AutoRotate = true
+                    end
+                end
+            end
+        end
+        
+    elseif input.KeyCode == Enum.KeyCode.RightControl then
+        toggleGUI()
+    end
+end
+
+UserInputService.InputBegan:Connect(inputHandler)
+
+updatePlayerList()
+Players.PlayerAdded:Connect(updatePlayerList)
+Players.PlayerRemoving:Connect(updatePlayerList)
+
+toggleButton.MouseButton1Click:Connect(function()
+    isActive = not isActive
+    toggleButton.Text = isActive and "АКТИВНО (Right Shift)" or "ВЫКЛ (Right Shift)"
+end)
+
+local function movePlayers()
+    if not isActive then return end
+    
+    local character = game.Players.LocalPlayer.Character
+    if not character then return end
+
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return end
+
+    local lookDirection = rootPart.CFrame.LookVector
+    local targetPosition = rootPart.Position + (lookDirection * targetDistance)
+    local targetCFrame = CFrame.new(targetPosition, targetPosition + lookDirection)
+
+    for playerName, selected in pairs(selectedPlayers) do
+        if selected then
+            local player = Players:FindFirstChild(playerName)
+            if player and player.Character then
+                local otherRoot = player.Character:FindFirstChild("HumanoidRootPart")
+                if otherRoot then
+                    otherRoot.CFrame = targetCFrame
+                    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+                    if humanoid then
+                        humanoid.AutoRotate = false
+                    end
+                end
+            end
+        end
+    end
+end
+
+RunService.Heartbeat:Connect(movePlayers)
