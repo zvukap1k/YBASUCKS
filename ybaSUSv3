@@ -1,0 +1,81 @@
+--by zvukap1k
+local Players, UserInputService, RunService = game:GetService("Players"), game:GetService("UserInputService"), game:GetService("RunService")
+local targetDistance, isActive, selectedPlayers, guiVisible = 5, false, {}, true
+
+local screenGui = Instance.new("ScreenGui", game.Players.LocalPlayer:WaitForChild("PlayerGui"))
+screenGui.Name = "PlayerSelectorGUI"
+
+local frame = Instance.new("Frame", screenGui)
+frame.Size, frame.Position = UDim2.new(0.2,0,0.3,0), UDim2.new(0.75,0,0.1,0)
+frame.BackgroundTransparency, frame.BackgroundColor3, frame.Active, frame.Draggable = 0.7, Color3.fromRGB(30,30,40), true, true
+
+local title = Instance.new("TextLabel", frame)
+title.Text, title.Size, title.Font, title.TextSize, title.TextColor3, title.BackgroundTransparency = "Attack them", UDim2.new(1,0,0.15,0), Enum.Font.SourceSansBold, 14, Color3.new(1,1,1), 1
+
+local playerList = Instance.new("ScrollingFrame", frame)
+playerList.Size, playerList.Position, playerList.BackgroundTransparency, playerList.ScrollBarThickness = UDim2.new(1,-5,0.7,0), UDim2.new(0,0,0.15,0), 1, 5
+
+local toggleButton = Instance.new("TextButton", frame)
+toggleButton.Text, toggleButton.Size, toggleButton.Position, toggleButton.TextSize = "ON/OFF (Right Shift)", UDim2.new(1,-10,0.1,0), UDim2.new(0,5,0.85,0), 12
+
+local function toggleGUI() guiVisible = not guiVisible frame.Visible = guiVisible end
+local function inputHandler(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        isActive = not isActive
+        toggleButton.Text = isActive and "ON (Right Shift)" or "OFF (Right Shift)"
+        if not isActive then
+            for playerName in pairs(selectedPlayers) do
+                local player = Players:FindFirstChild(playerName)
+                if player and player.Character then
+                    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+                    if humanoid then humanoid.AutoRotate = true end
+                end
+            end
+        end
+    elseif input.KeyCode == Enum.KeyCode.RightControl then toggleGUI() end
+end
+
+local function updatePlayerList()
+    playerList:ClearAllChildren()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= game.Players.LocalPlayer then
+            local button = Instance.new("TextButton", playerList)
+            button.Text, button.Size, button.Position, button.TextXAlignment, button.TextSize = " "..player.Name, UDim2.new(1,-10,0,25), UDim2.new(0,5,0,#playerList:GetChildren()*27), Enum.TextXAlignment.Left, 12
+            button.BackgroundColor3 = selectedPlayers[player.Name] and Color3.fromRGB(0,100,0) or Color3.fromRGB(60,60,60)
+            button.MouseButton1Click:Connect(function()
+                selectedPlayers[player.Name] = not selectedPlayers[player.Name]
+                button.BackgroundColor3 = selectedPlayers[player.Name] and Color3.fromRGB(0,100,0) or Color3.fromRGB(60,60,60)
+            end)
+        end
+    end
+end
+
+local function movePlayers()
+    if not isActive then return end
+    local character = game.Players.LocalPlayer.Character
+    if not character then return end
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return end
+    local lookDirection = rootPart.CFrame.LookVector
+    local targetPosition = rootPart.Position + (lookDirection * targetDistance)
+    local targetCFrame = CFrame.new(targetPosition, targetPosition + lookDirection)
+    for playerName, selected in pairs(selectedPlayers) do
+        if selected then
+            local player = Players:FindFirstChild(playerName)
+            if player and player.Character then
+                local otherRoot = player.Character:FindFirstChild("HumanoidRootPart")
+                if otherRoot then
+                    otherRoot.CFrame = targetCFrame
+                    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+                    if humanoid then humanoid.AutoRotate = false end
+                end
+            end
+        end
+    end
+end
+
+UserInputService.InputBegan:Connect(inputHandler)
+toggleButton.MouseButton1Click:Connect(function() isActive = not isActive toggleButton.Text = isActive and "ON (Right Shift)" or "OFF (Right Shift)" end)
+updatePlayerList() Players.PlayerAdded:Connect(updatePlayerList) Players.PlayerRemoving:Connect(updatePlayerList)
+RunService.Heartbeat:Connect(movePlayers)
